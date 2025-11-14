@@ -1,3 +1,9 @@
+# app/db/base.py
+
+# 1) Importa Base desde session.py
+from app.db.session import Base
+
+# 2) Importa TODOS los modelos para que se registren en el metadata de Base
 from app.models.user import User
 from app.models.role import Role
 from app.models.user_parcel_access import UserParcelAccess
@@ -22,6 +28,3 @@ from app.models.rule_actuator_map import RuleActuatorMap
 
 from app.models.threshold_config import ThresholdConfig
 from app.models.cooperative import Cooperative
-
-from app.models.report import Report
-from app.models.notification import Notification

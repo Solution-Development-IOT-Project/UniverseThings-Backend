@@ -1,20 +1,25 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # -----------------------
 # BASE
 # -----------------------
 class ImageBase(BaseModel):
-    file_path: str                       # ruta donde está almacenada la imagen
-    image_type: str                      # rgb, ndvi, thermal, segmentation, etc.
-    metadata: Optional[str] = None       # metadatos en formato texto/JSON
-    analysis_result: Optional[str] = None
+    file_path: str
+    image_type: str
 
-    camera_id: int                       # FK obligatoria
+    # nombre interno: image_metadata
+    # nombre en JSON: "metadata"
+    image_metadata: Optional[Any] = Field(default=None, alias="metadata")
+
+    analysis_result: Optional[str] = None
+    camera_id: int
+
+    # permitir usar nombres internos (image_metadata) y alias
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # -----------------------
@@ -31,10 +36,15 @@ class ImageCreate(ImageBase):
 class ImageUpdate(BaseModel):
     file_path: Optional[str] = None
     image_type: Optional[str] = None
-    metadata: Optional[str] = None
+
+    # igual que en base: interno image_metadata, JSON "metadata"
+    image_metadata: Optional[Any] = Field(default=None, alias="metadata")
+
     analysis_result: Optional[str] = None
     camera_id: Optional[int] = None
     captured_at: Optional[datetime] = None
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # -----------------------
@@ -46,7 +56,10 @@ class ImageInDBBase(ImageBase):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
 
 
 # -----------------------

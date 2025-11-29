@@ -10,6 +10,8 @@ from app.schemas.device import (
     DeviceCreate,
     DeviceUpdate,
 )
+from app.crud.crud_device import device as crud_device
+from app.crud.crud_cultivation_zone import cultivation_zone as crud_cultivation_zone
 
 router = APIRouter(
     prefix="/devices",
@@ -22,7 +24,7 @@ def list_devices(
     db: Session = Depends(get_db),
     _: any = Depends(get_current_active_user),
 ):
-    return db.query(DeviceModel).all()
+    return crud_device.get_multi(db)
 
 
 @router.get("/{device_id}", response_model=DeviceSchema)
@@ -31,11 +33,11 @@ def get_device(
     db: Session = Depends(get_db),
     _: any = Depends(get_current_active_user),
 ):
-    obj = db.query(DeviceModel).filter(DeviceModel.id == device_id).first()
+    obj = crud_device.get(db, id=device_id)
     if not obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dispositivo no encontrado",
+            detail="Device not found",
         )
     return obj
 
@@ -46,10 +48,16 @@ def create_device(
     db: Session = Depends(get_db),
     _: any = Depends(get_current_active_user),
 ):
-    obj = DeviceModel(**device_in.dict())
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
+    # Validate zone_id
+    if device_in.zone_id is not None:
+        existing_zone = crud_cultivation_zone.get(db, id=device_in.zone_id)
+        if not existing_zone:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Cultivation zone with ID {device_in.zone_id} not found."
+            )
+
+    obj = crud_device.create(db, obj_in=device_in)
     return obj
 
 
@@ -60,19 +68,14 @@ def update_device(
     db: Session = Depends(get_db),
     _: any = Depends(get_current_active_user),
 ):
-    obj = db.query(DeviceModel).filter(DeviceModel.id == device_id).first()
+    obj = crud_device.get(db, id=device_id)
     if not obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dispositivo no encontrado",
+            detail="Device not found",
         )
 
-    data = device_in.dict(exclude_unset=True)
-    for field, value in data.items():
-        setattr(obj, field, value)
-
-    db.commit()
-    db.refresh(obj)
+    obj = crud_device.update(db, db_obj=obj, obj_in=device_in)
     return obj
 
 
@@ -82,12 +85,12 @@ def delete_device(
     db: Session = Depends(get_db),
     _: any = Depends(get_current_active_user),
 ):
-    obj = db.query(DeviceModel).filter(DeviceModel.id == device_id).first()
+    obj = crud_device.get(db, id=device_id)
     if not obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dispositivo no encontrado",
+            detail="Device not found",
         )
 
-    db.delete(obj)
-    db.commit()
+    crud_device.remove(db, id=device_id)
+    return {"message": "Device deleted successfully"}

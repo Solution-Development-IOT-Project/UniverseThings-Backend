@@ -10,6 +10,8 @@ from app.schemas.cultivation_zone import (
     CultivationZoneCreate,
     CultivationZoneUpdate,
 )
+from app.crud.crud_parcel import parcel as crud_parcel
+from app.crud.crud_cultivation_zone import cultivation_zone as crud_cultivation_zone
 
 router = APIRouter(
     prefix="/zones",
@@ -46,10 +48,16 @@ def create_zone(
     db: Session = Depends(get_db),
     _: any = Depends(get_current_active_user),
 ):
-    obj = ZoneModel(**zone_in.dict())
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
+    # Validate parcel_id
+    if zone_in.parcel_id is not None:
+        existing_parcel = crud_parcel.get(db, id=zone_in.parcel_id)
+        if not existing_parcel:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Parcel with ID {zone_in.parcel_id} not found."
+            )
+
+    obj = crud_cultivation_zone.create(db, obj_in=zone_in)
     return obj
 
 
